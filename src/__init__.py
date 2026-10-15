@@ -8,7 +8,9 @@ from src.model import (
     prepare_prophet_data,
     train_prophet_model,
     generate_forecast,
-    evaluate_forecast
+    evaluate_forecast,
+    render_prophet_forecast_plot,
+    render_prophet_components_plot
 )
 
 __all__ = [
@@ -18,5 +20,7 @@ __all__ = [
     "prepare_prophet_data",
     "train_prophet_model",
     "generate_forecast",
-    "evaluate_forecast"
+    "evaluate_forecast",
+    "render_prophet_forecast_plot",
+    "render_prophet_components_plot"
 ]

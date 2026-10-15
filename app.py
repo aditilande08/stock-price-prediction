@@ -11,7 +11,6 @@ import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from prophet.plot import plot_plotly, plot_components_plotly
 
 # Add project root to sys.path
 sys.path.insert(0, os.path.dirname(__file__))
@@ -22,7 +21,9 @@ from src.model import (
     prepare_prophet_data,
     train_prophet_model,
     generate_forecast,
-    evaluate_forecast
+    evaluate_forecast,
+    render_prophet_forecast_plot,
+    render_prophet_components_plot
 )
 
 # Page Configuration
@@ -293,16 +294,7 @@ with tab_forecast:
     st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
     
     # Interactive Plotly Chart
-    fig_fc = plot_plotly(model, forecast_df)
-    fig_fc.update_layout(
-        title=f"Meta Prophet Forecast for {selected_ticker} ({forecast_days} Days Horizon)",
-        xaxis_title="Date",
-        yaxis_title="Stock Price (USD)",
-        template="plotly_white",
-        hovermode="x unified",
-        margin=dict(l=20, r=20, t=50, b=20),
-        xaxis_rangeslider_visible=True
-    )
+    fig_fc = render_prophet_forecast_plot(model, forecast_df, selected_ticker)
     st.plotly_chart(fig_fc, use_container_width=True)
     
     st.caption("ℹ️ Black dots represent actual historical close prices; dark blue line is Prophet's median expected trend; light blue shaded area indicates 80% uncertainty bounds.")
@@ -376,12 +368,7 @@ with tab_components:
     st.markdown("#### 📊 Prophet Decomposition: Trend & Seasonality")
     st.write("Prophet decomposes time-series into long-term secular growth, weekly calendar cycles, and yearly seasonality:")
     
-    fig_comp = plot_components_plotly(model, forecast_df)
-    fig_comp.update_layout(
-        template="plotly_white",
-        height=600,
-        margin=dict(l=20, r=20, t=30, b=20)
-    )
+    fig_comp = render_prophet_components_plot(model, forecast_df)
     st.plotly_chart(fig_comp, use_container_width=True)
 
 

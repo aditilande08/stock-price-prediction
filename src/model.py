@@ -172,3 +172,122 @@ def evaluate_forecast(df: pd.DataFrame, test_days: int = 60) -> dict:
         "y_true": [round(float(v), 2) for v in y_true],
         "y_pred": [round(float(v), 2) for v in y_pred]
     }
+
+
+def render_prophet_forecast_plot(model: Prophet, forecast: pd.DataFrame, ticker: str = "Stock"):
+    """
+    Render custom interactive Plotly forecast plot compatible with Pandas 2+.
+    Avoids deprecated 'assert m.history' in prophet.plot.plot_plotly.
+    """
+    import plotly.graph_objects as go
+    fig = go.Figure()
+
+    # Actual historical points
+    if hasattr(model, 'history') and model.history is not None:
+        fig.add_trace(go.Scatter(
+            x=model.history['ds'],
+            y=model.history['y'],
+            name='Actual Close Price',
+            mode='markers',
+            marker=dict(color='#0f172a', size=3)
+        ))
+
+    # Upper bound
+    fig.add_trace(go.Scatter(
+        x=forecast['ds'],
+        y=forecast['yhat_upper'],
+        mode='lines',
+        line=dict(width=0),
+        showlegend=False,
+        hoverinfo='skip'
+    ))
+    
+    # Lower bound with fill
+    fig.add_trace(go.Scatter(
+        x=forecast['ds'],
+        y=forecast['yhat_lower'],
+        mode='lines',
+        line=dict(width=0),
+        fill='tonexty',
+        fillcolor='rgba(37, 99, 235, 0.18)',
+        name='80% Confidence Band'
+    ))
+
+    # Projected trendline
+    fig.add_trace(go.Scatter(
+        x=forecast['ds'],
+        y=forecast['yhat'],
+        name='Projected Trend (yhat)',
+        mode='lines',
+        line=dict(color='#2563eb', width=2.5)
+    ))
+
+    fig.update_layout(
+        title=f"Meta Prophet Price Forecast: {ticker}",
+        xaxis_title="Date",
+        yaxis_title="Stock Price (USD)",
+        template="plotly_white",
+        hovermode="x unified",
+        xaxis_rangeslider_visible=True,
+        margin=dict(l=20, r=20, t=50, b=20)
+    )
+    return fig
+
+
+def render_prophet_components_plot(model: Prophet, forecast: pd.DataFrame):
+    """
+    Render custom 3-subplot Plotly decomposition figure: Trend, Weekly, and Yearly.
+    """
+    from plotly.subplots import make_subplots
+    import plotly.graph_objects as go
+
+    components = ["trend"]
+    titles = ["Overall Secular Trend"]
+
+    if "weekly" in forecast.columns:
+        components.append("weekly")
+        titles.append("Weekly Seasonality (Day-of-Week Effect)")
+    if "yearly" in forecast.columns:
+        components.append("yearly")
+        titles.append("Yearly Seasonality (Month-of-Year Effect)")
+
+    fig = make_subplots(
+        rows=len(components), cols=1,
+        shared_xaxes=False,
+        vertical_spacing=0.14,
+        subplot_titles=titles
+    )
+
+    for idx, comp in enumerate(components, start=1):
+        if comp == "trend":
+            fig.add_trace(
+                go.Scatter(x=forecast['ds'], y=forecast['trend'], name="Trend", line=dict(color="#2563eb", width=2)),
+                row=idx, col=1
+            )
+        elif comp == "weekly":
+            temp = forecast.copy()
+            temp['day_name'] = temp['ds'].dt.day_name()
+            order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+            weekly_mean = temp.groupby('day_name')['weekly'].mean().reindex(order).dropna()
+            fig.add_trace(
+                go.Scatter(x=weekly_mean.index, y=weekly_mean.values, name="Weekly", line=dict(color="#10b981", width=2)),
+                row=idx, col=1
+            )
+        elif comp == "yearly":
+            temp = forecast.copy()
+            temp['day_of_year'] = temp['ds'].dt.dayofyear
+            yearly_curve = temp.groupby('day_of_year')['yearly'].mean().sort_index().rolling(7, min_periods=1).mean()
+            ref_dates = pd.date_range("2024-01-01", periods=len(yearly_curve), freq="D")
+            fig.add_trace(
+                go.Scatter(x=ref_dates, y=yearly_curve.values, name="Yearly", line=dict(color="#f59e0b", width=2)),
+                row=idx, col=1
+            )
+
+    fig.update_layout(
+        template="plotly_white",
+        height=260 * len(components),
+        showlegend=False,
+        margin=dict(l=20, r=20, t=40, b=20)
+    )
+    return fig
+
