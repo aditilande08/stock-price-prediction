@@ -140,7 +140,7 @@ stock-price-prediction/
 
 ### 1. Clone or Navigate to the Directory
 ```powershell
-cd C:\Users\aditi\.gemini\antigravity-ide\scratch\stock-price-prediction
+cd C:\Users\aditi\scratch\stock-price-prediction
 ```
 
 ### 2. Set Up a Virtual Environment (Recommended)
